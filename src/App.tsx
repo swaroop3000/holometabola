@@ -3,6 +3,7 @@ import { PULSES, STAGES, TICKER_GENES, PATHWAYS, totalGenes } from "./data/biolo
 import { Reveal, Scramble, SectionHead, Stat, prefersReduced } from "./components/ui";
 import { StageMorpher } from "./components/creatures";
 import { StageExplorer } from "./components/explorer";
+import { MetamorphosisLab } from "./components/lab3d";
 import { PulseTimeline, CascadeDiagram, HormoneSwitch } from "./components/cascade";
 import { ResearchGaps, Footer } from "./components/gaps";
 
@@ -84,7 +85,7 @@ const NAV = [
   { id: "gaps", label: "Unknowns" },
 ];
 
-function Header() {
+function Header({ view, setView }: { view: "atlas" | "lab"; setView: (v: "atlas" | "lab") => void }) {
   const [pct, setPct] = useState(0);
   useEffect(() => {
     const onScroll = () => {
@@ -99,8 +100,8 @@ function Header() {
 
   return (
     <header className="fixed top-0 inset-x-0 z-50 bg-abyss/80 backdrop-blur-md border-b border-line/60">
-      <div className="max-w-7xl mx-auto px-4 md:px-8 h-[58px] flex items-center gap-6">
-        <a href="#plate" className="flex items-center gap-2.5 group">
+      <div className="max-w-7xl mx-auto px-4 md:px-8 h-[58px] flex items-center gap-4 md:gap-6">
+        <a href="#plate" onClick={() => setView("atlas")} className="flex items-center gap-2.5 group shrink-0">
           <span className="w-2.5 h-2.5 rounded-full bg-ecd relative">
             <span className="absolute inset-0 rounded-full bg-ecd animate-ping opacity-40" />
           </span>
@@ -108,19 +109,49 @@ function Header() {
             HOLOMETABOLA
           </span>
         </a>
-        <nav className="ml-auto hidden md:flex items-center gap-1">
-          {NAV.map((n, i) => (
-            <a
-              key={n.id}
-              href={`#${n.id}`}
-              className="font-mono text-[11px] uppercase tracking-[0.16em] text-dim hover:text-ecd px-3 py-1.5 rounded transition-colors"
-            >
-              <span className="text-faint mr-1.5">{String(i + 1).padStart(2, "0")}</span>
-              {n.label}
-            </a>
-          ))}
+
+        {/* view switcher */}
+        <div className="flex items-center gap-1 border border-line rounded-lg p-1 bg-deep/60">
+          <button
+            type="button"
+            onClick={() => setView("atlas")}
+            className="font-mono text-[10px] md:text-[11px] uppercase tracking-[0.14em] px-2.5 md:px-3.5 py-1.5 rounded-md transition-all cursor-pointer"
+            style={{
+              background: view === "atlas" ? "rgba(110,240,163,0.14)" : "transparent",
+              color: view === "atlas" ? "#6ef0a3" : "#93aeb1",
+              boxShadow: view === "atlas" ? "0 0 14px rgba(110,240,163,0.2)" : "none",
+            }}
+          >
+            Genome atlas
+          </button>
+          <button
+            type="button"
+            onClick={() => setView("lab")}
+            className="font-mono text-[10px] md:text-[11px] uppercase tracking-[0.14em] px-2.5 md:px-3.5 py-1.5 rounded-md transition-all cursor-pointer"
+            style={{
+              background: view === "lab" ? "rgba(196,169,255,0.14)" : "transparent",
+              color: view === "lab" ? "#c4a9ff" : "#93aeb1",
+              boxShadow: view === "lab" ? "0 0 14px rgba(196,169,255,0.2)" : "none",
+            }}
+          >
+            ⬡ 3D lab
+          </button>
+        </div>
+
+        <nav className="ml-auto hidden lg:flex items-center gap-1">
+          {view === "atlas" &&
+            NAV.map((n, i) => (
+              <a
+                key={n.id}
+                href={`#${n.id}`}
+                className="font-mono text-[11px] uppercase tracking-[0.16em] text-dim hover:text-ecd px-3 py-1.5 rounded transition-colors"
+              >
+                <span className="text-faint mr-1.5">{String(i + 1).padStart(2, "0")}</span>
+                {n.label}
+              </a>
+            ))}
         </nav>
-        <span className="ml-auto md:ml-0 font-mono text-[10.5px] text-faint hidden sm:block">
+        <span className="ml-auto lg:ml-0 font-mono text-[10.5px] text-faint hidden md:block">
           D. melanogaster · 25 °C
         </span>
       </div>
@@ -332,10 +363,25 @@ function SpecimenPlate() {
 
 /* ================= app ================= */
 export default function App() {
+  const [view, setViewRaw] = useState<"atlas" | "lab">("atlas");
+  const setView = (v: "atlas" | "lab") => {
+    setViewRaw(v);
+    window.scrollTo(0, 0);
+  };
+
+  if (view === "lab") {
+    return (
+      <div className="relative">
+        <Header view={view} setView={setView} />
+        <MetamorphosisLab onOpenAtlas={() => setView("atlas")} />
+      </div>
+    );
+  }
+
   return (
     <div className="relative">
       <Backdrop />
-      <Header />
+      <Header view={view} setView={setView} />
 
       <main className="relative z-10">
         <SpecimenPlate />

@@ -246,18 +246,20 @@ const CREATURES = [
 
 export function StageMorpher({ active, className = "" }: { active: number; className?: string }) {
   return (
-    <div className={`relative ${className}`}>
-      {CREATURES.map(({ key, C }, i) => {
-        const isActive = i === active;
-        const style: CSSProperties = isActive
-          ? { opacity: 1, transform: "scale(1)", filter: "blur(0px)" }
-          : { opacity: 0, transform: "scale(0.82) translateY(10px)", filter: "blur(7px)", pointerEvents: "none" };
-        return (
-          <div key={key} className="morph-layer absolute inset-0 grid place-items-center" style={style}>
-            <C className="w-full h-full" />
-          </div>
-        );
-      })}
+    <div className={className}>
+      <div className="relative w-full h-full">
+        {CREATURES.map(({ key, C }, i) => {
+          const isActive = i === active;
+          const style: CSSProperties = isActive
+            ? { opacity: 1, transform: "scale(1)", filter: "blur(0px)" }
+            : { opacity: 0, transform: "scale(0.82) translateY(10px)", filter: "blur(7px)", pointerEvents: "none" };
+          return (
+            <div key={key} className="morph-layer absolute inset-0 grid place-items-center" style={style}>
+              <C className="w-full h-full" />
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
