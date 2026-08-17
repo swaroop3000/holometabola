@@ -37,6 +37,81 @@ const PATH_COUNTS = PATH_KEYS.map(
   (pk) => ORB_GENES.filter((o) => o.pk === pk).length
 );
 
+/* symbol → full Gene record (first occurrence across stages) */
+const GENE_BY_SYMBOL = new Map<string, Gene>();
+STAGES.forEach((st) =>
+  st.groups.forEach((gr) =>
+    gr.genes.forEach((g) => {
+      if (!GENE_BY_SYMBOL.has(g.symbol)) GENE_BY_SYMBOL.set(g.symbol, g);
+    })
+  )
+);
+
+/* ================================================================== */
+/*  anatomy atlas parts                                                */
+/* ================================================================== */
+export type PartInfo = {
+  id: string;
+  stage: number;
+  label: string;
+  fn: string;
+  genes: string[];
+  pos: [number, number, number];
+};
+
+const PARTS: PartInfo[] = [
+  /* ---- EGG ---- */
+  { id: "egg-appendage", stage: 0, label: "Dorsal appendages", pos: [-0.2, 1.42, 0.14], fn: "Two respiratory filaments laid down by Gurken/EGFR dorsal–ventral signaling; they pipe oxygen into the egg.", genes: ["Egfr", "spi", "rho"] },
+  { id: "egg-micropyle", stage: 0, label: "Micropyle", pos: [0.02, 1.18, 0.12], fn: "The single sperm-entry channel at the anterior tip. The same pole is patterned by Torso/Tsl terminal signaling.", genes: ["tor", "tsl"] },
+  { id: "egg-chorion", stage: 0, label: "Chorion & vitelline membrane", pos: [0.44, -0.2, 0.42], fn: "Protective eggshell built by nurse and follicle cells — whose chorion genes are amplified under ovarian ecdysone signaling.", genes: ["EcR", "usp", "kkv"] },
+  { id: "egg-anterior", stage: 0, label: "Anterior morphogen source", pos: [0.3, 0.8, 0.36], fn: "bicoid mRNA anchored at the front; its protein gradient is the embryo's first coordinate system, activating hunchback.", genes: ["bcd", "hb"] },
+  { id: "egg-posterior", stage: 0, label: "Posterior pole plasm", pos: [0.16, -0.9, 0.34], fn: "oskar-nucleated germ plasm: it seeds the future germ line and lets the abdomen form by repressing hunchback.", genes: ["osk", "nos", "tll"] },
+  { id: "egg-germband", stage: 0, label: "Germ band embryo", pos: [0, -0.05, 0.64], fn: "The embryo proper, mid-gastrulation: gap → pair-rule → segment-polarity genes are carving 14 segments.", genes: ["eve", "ftz", "en", "wg"] },
+
+  /* ---- LARVA ---- */
+  { id: "larva-hooks", stage: 1, label: "Mouth hooks", pos: [-1.52, 0.2, 0.18], fn: "Sclerotized feeding jaws of the cephalopharyngeal skeleton — the engine of the 200-fold mass increase, wired to insulin/TOR growth.", genes: ["InR", "chico", "Myc"] },
+  { id: "larva-ring", stage: 1, label: "Ring gland (prothoracic)", pos: [-0.55, 0.52, -0.36], fn: "The ecdysone factory. PTTH from two brain neurons hits the Torso receptor here and every Halloween gene fires — one pulse each time.", genes: ["ptth", "tor", "phm", "sad"] },
+  { id: "larva-polytene", stage: 1, label: "Salivary gland polytene chromosomes", pos: [-0.85, -0.2, 0.46], fn: "Giant banded chromosomes where each ecdysone pulse paints a visible 'puff' — the first place the gene cascade was ever seen.", genes: ["E74", "E75", "Br-C", "ftz-f1"] },
+  { id: "larva-discs", stage: 1, label: "Imaginal discs", pos: [-0.42, 0.72, 0.36], fn: "Sac-like adult primordia (wing, leg, eye…) growing quietly inside the larva, patterned by Dpp/Wg/Hh organizers.", genes: ["vg", "ey", "Dll", "dpp"] },
+  { id: "larva-segments", stage: 1, label: "Body wall segments", pos: [0, 0.68, 0.24], fn: "Twelve peristaltic units maintained by the engrailed↔wingless feedback loop; their muscles drive crawling.", genes: ["en", "wg", "hh"] },
+  { id: "larva-fatbody", stage: 1, label: "Fat body", pos: [0.78, 0.22, -0.48], fn: "The nutrient command center: Slimfast senses amino acids, TOR reports them, and Dilp8 reports damaged discs to delay metamorphosis.", genes: ["slif", "TOR", "Dilp8"] },
+  { id: "larva-gut", stage: 1, label: "Midgut", pos: [0.25, -0.35, 0.48], fn: "Digestion and copper cells; its anterior identity is a Hox readout (labial) set in the embryo and kept ever since.", genes: ["lab", "hkb"] },
+  { id: "larva-spiracles", stage: 1, label: "Posterior spiracles", pos: [1.5, 0.12, 0.34], fn: "Breathing ports of the tracheal tree; their identity is written by the terminal Hox gene Abd-B.", genes: ["Abd-B", "tll"] },
+
+  /* ---- PUPA ---- */
+  { id: "pupa-case", stage: 2, label: "Puparium", pos: [0.52, 0.3, 0.22], fn: "The last larval skin, tanned into a rigid amber barrel. It is a coffin for the larva and a cradle for the adult.", genes: ["Lac2", "yellow", "kkv"] },
+  { id: "pupa-operculum", stage: 2, label: "Operculum", pos: [0.18, 1.08, 0.38], fn: "The pre-cut escape lid at the anterior end, popped open by the ETH→EH→CCAP eclosion behavior cascade at dawn.", genes: ["ETH", "Eh", "Ccap"] },
+  { id: "pupa-horns", stage: 2, label: "Anterior horns", pos: [0.24, 1.36, 0.14], fn: "Spiracular horns keeping the respiratory line open while everything inside is rebuilt.", genes: ["tll", "hkb"] },
+  { id: "pupa-discs", stage: 2, label: "Everted imaginal discs", pos: [0.36, 0.74, 0.4], fn: "Within hours of the prepupal pulse the discs flip inside-out and fuse into the head and thorax — the adult's first appearance.", genes: ["Dll", "ey", "vg", "shg"] },
+  { id: "pupa-pharate", stage: 2, label: "Pharate adult", pos: [0, 0.2, 0.54], fn: "The nearly-finished fly developing in secret. E93 is its master switch: adult program ON, larval program OFF.", genes: ["E93", "Abd-B", "dsx"] },
+  { id: "pupa-histolysis", stage: 2, label: "Histolyzing larval tissues", pos: [0.46, -0.45, 0.36], fn: "Salivary glands, larval muscles and midgut are digested by reaper/caspase apoptosis plus Atg-driven autophagy.", genes: ["rpr", "Dronc", "Atg8a", "Drice"] },
+  { id: "pupa-muscles", stage: 2, label: "Muscle remodeling", pos: [0.4, -0.86, -0.3], fn: "Most larval muscles die; adult myoblasts fuse into flight muscle, anchored by integrins to the new cuticle.", genes: ["mys", "arm", "Atg1"] },
+
+  /* ---- ADULT ---- */
+  { id: "fly-eye", stage: 3, label: "Compound eye", pos: [-0.98, 0.34, 0.46], fn: "~800 ommatidia built by the eyeless/Pax6 selector and Notch lateral inhibition — the classic 'master control' organ.", genes: ["ey", "N", "Dl"] },
+  { id: "fly-antenna", stage: 3, label: "Antenna & arista", pos: [-1.3, 0.18, 0.24], fn: "The olfactory organ. Its identity is 'proximal limb' (homothorax) — force Antennapedia on it and it grows a leg instead.", genes: ["hth", "Dll", "Antp"] },
+  { id: "fly-proboscis", stage: 3, label: "Proboscis", pos: [-1.1, -0.48, 0.14], fn: "The feeding organ of labial identity — specified by the Hox genes proboscipedia and Sex combs reduced.", genes: ["pb", "Scr"] },
+  { id: "fly-wing", stage: 3, label: "Wing", pos: [0.42, 0.7, 0.48], fn: "The vestigial/scalloped selector organ, inflated after eclosion by bursicon and anchored by dumpy to take its shape.", genes: ["vg", "sd", "apt", "burs"] },
+  { id: "fly-haltere", stage: 3, label: "Haltere", pos: [0.28, 0.46, 0.6], fn: "The T3 balancing gyroscope — a wing that never was, because Ultrabithorax represses the wing program in the third segment.", genes: ["Ubx"] },
+  { id: "fly-thorax", stage: 3, label: "Thorax & legs", pos: [0.05, -0.15, 0.64], fn: "Antennapedia territory: six legs with distal identity from Distal-less and nuclear Hox co-factors.", genes: ["Antp", "Dll", "exd"] },
+  { id: "fly-abdomen", stage: 3, label: "Abdominal segments", pos: [1.15, 0.4, 0.42], fn: "The posterior Hox code (abd-A, Abd-B) in stripes — and the tissue doublesex sculpts differently in each sex.", genes: ["abd-A", "Abd-B", "dsx"] },
+  { id: "fly-cuticle", stage: 3, label: "Cuticle & pigment", pos: [1.48, -0.15, -0.44], fn: "Tanned and hardened after eclosion: Ple→Ddc make dopamine, ebony/tan set the shade, yellow lays black melanin.", genes: ["Ple", "ebony", "tan", "yellow"] },
+  { id: "fly-gonad", stage: 3, label: "Ovary — the loop closes", pos: [0.9, -0.38, 0.46], fn: "The adult no longer has a prothoracic gland — the ovary itself now makes ecdysone (via shade) to run oogenesis.", genes: ["EcR", "shd", "Sxl"] },
+];
+
+const PART_BY_ID = new Map(PARTS.map((p) => [p.id, p]));
+
+/* morph captions over morphT ∈ [0, 3] */
+const CAPTIONS: { a: number; b: number; label: string; sub: string }[] = [
+  { a: -1, b: 0.5, label: "Embryogenesis", sub: "bcd/nos gradients → gap → pair-rule → Hox: one cell becomes a segmented larva." },
+  { a: 0.5, b: 1.0, label: "Hatching", sub: "βFTZ-F1 gates the first molt; the larva swells with air and chews free of the chorion." },
+  { a: 1.0, b: 1.5, label: "Larval growth — 3 instars", sub: "~200× mass on insulin/TOR. Every 20E pulse is only a molt while JH holds the status quo." },
+  { a: 1.5, b: 2.0, label: "Wandering → pupariation", sub: "JH crashes, the prepupal pulse fires, EcR-A rises — larval skin tans into the puparium." },
+  { a: 2.0, b: 2.5, label: "Pupal remodeling", sub: "E93 ON: histolysis digests the larva while everted discs assemble the adult in secret." },
+  { a: 2.5, b: 2.95, label: "Eclosion", sub: "ETH → EH → CCAP behaviors; the ptilinum inflates and the operculum pops at dawn." },
+  { a: 2.95, b: 4, label: "Adult imago", sub: "Bursicon inflates the wings, Lac2 hardens the cuticle — and the ovary takes over ecdysone." },
+];
+
 function makeLabel(text: string, color: string): THREE.CanvasTexture {
   const c = document.createElement("canvas");
   c.width = 256;
@@ -387,6 +462,9 @@ type LabAPI = {
   setFilter: (pk: PathwayKey | null) => void;
   setBeat: (b: boolean) => void;
   setAuto: (b: boolean) => void;
+  setMode: (m: "orrery" | "atlas") => void;
+  setMorph: (v: number) => void;
+  setPlaying: (b: boolean) => void;
   pulse: () => void;
 };
 
@@ -404,6 +482,16 @@ export function MetamorphosisLab({ onOpenAtlas }: { onOpenAtlas: () => void }) {
   const [auto, setAuto] = useState(() => !prefersReduced());
   const [beat, setBeat] = useState(false);
   const [pulses, setPulses] = useState(0);
+  const [mode, setMode] = useState<"orrery" | "atlas">("orrery");
+  const [playing, setPlaying] = useState(false);
+  const [selectedPart, setSelectedPart] = useState<PartInfo | null>(null);
+
+  const captionRef = useRef<HTMLSpanElement | null>(null);
+  const subRef = useRef<HTMLSpanElement | null>(null);
+  const hoursRef = useRef<HTMLSpanElement | null>(null);
+  const scrubRef = useRef<HTMLInputElement | null>(null);
+  const tooltipRef = useRef<HTMLDivElement | null>(null);
+  const scrubbingRef = useRef(false);
 
   stageSetterRef.current = setStage;
 
@@ -511,6 +599,43 @@ export function MetamorphosisLab({ onOpenAtlas }: { onOpenAtlas: () => void }) {
       });
     };
 
+    /* anatomy hotspots (atlas mode) */
+    type Hotspot = {
+      mesh: THREE.Mesh;
+      ring: THREE.Mesh;
+      mat: THREE.MeshBasicMaterial;
+      ringMat: THREE.MeshBasicMaterial;
+      part: PartInfo;
+      op: number;
+    };
+    const hotspots: Hotspot[] = [];
+    const hsGeo = new THREE.SphereGeometry(0.085, 14, 12);
+    const hsRingGeo = new THREE.TorusGeometry(0.17, 0.011, 8, 40);
+    PARTS.forEach((part) => {
+      const mat = new THREE.MeshBasicMaterial({
+        color: 0xeafff3,
+        transparent: true,
+        opacity: 0,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+      });
+      const mesh = new THREE.Mesh(hsGeo, mat);
+      mesh.position.set(part.pos[0], part.pos[1], part.pos[2]);
+      mesh.userData.partId = part.id;
+      const ringMat = new THREE.MeshBasicMaterial({
+        color: new THREE.Color(STAGES[part.stage].accent),
+        transparent: true,
+        opacity: 0,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+        side: THREE.DoubleSide,
+      });
+      const ring = new THREE.Mesh(hsRingGeo, ringMat);
+      mesh.add(ring);
+      handles[part.stage].group.add(mesh);
+      hotspots.push({ mesh, ring, mat, ringMat, part, op: 0 });
+    });
+
     /* gene rings + orbs */
     const rings: Ring[] = [];
     const orbs: Orb[] = [];
@@ -603,18 +728,29 @@ export function MetamorphosisLab({ onOpenAtlas }: { onOpenAtlas: () => void }) {
       filter: null as PathwayKey | null,
       beat: false,
       mouse: new THREE.Vector2(-10, -10),
+      mouseCX: 0,
+      mouseCY: 0,
       mouseOn: false,
       waves: [] as Wave[],
       bursts: [] as Burst[],
       pointers: new Map<number, { x: number; y: number }>(),
       pinchDist: 0,
+      /* morph timeline + atlas */
+      mode: "orrery" as "orrery" | "atlas",
+      playing: false,
+      morphT: 0,
+      morphTarget: 0,
+      prevMorphT: 0,
+      lastNearest: 0,
+      captionIdx: -1,
+      selectedPartId: null as string | null,
+      hoverPartId: null as string | null,
     };
 
     const tmpV = new THREE.Vector3();
     const raycaster = new THREE.Raycaster();
 
-    const spawnBurst = (hex: string, power = 1) => {
-      const n = 90;
+    const spawnBurst = (hex: string, power = 1, n = 90, at?: THREE.Vector3) => {
       const geo = new THREE.BufferGeometry();
       const pos = new Float32Array(n * 3);
       const vel = new Float32Array(n * 3);
@@ -642,6 +778,7 @@ export function MetamorphosisLab({ onOpenAtlas }: { onOpenAtlas: () => void }) {
         blending: THREE.AdditiveBlending,
       });
       const points = new THREE.Points(geo, mat);
+      if (at) points.position.copy(at);
       scene.add(points);
       sim.bursts.push({ points, mat, vel, life: 1 });
     };
@@ -673,12 +810,12 @@ export function MetamorphosisLab({ onOpenAtlas }: { onOpenAtlas: () => void }) {
     };
 
     const gotoStage = (i: number) => {
-      if (i === sim.targetStage) return;
-      sim.targetStage = i;
+      sim.playing = false;
       sim.cycle = 0;
+      sim.morphTarget = i;
       sim.kick = Math.max(sim.kick, 0.55);
       glowTarget.set(STAGES[i].accent);
-      spawnBurst(STAGES[i].accent, 0.9);
+      spawnBurst(STAGES[i].accent, 0.9, 60);
       spawnWave(STAGES[i].accent);
     };
 
@@ -694,6 +831,25 @@ export function MetamorphosisLab({ onOpenAtlas }: { onOpenAtlas: () => void }) {
         sim.auto = b;
         sim.cycle = 0;
       },
+      setMode: (m) => {
+        sim.mode = m;
+        sim.selectedPartId = null;
+        sim.camTarget = m === "atlas" ? 6.3 : 8.4;
+      },
+      setMorph: (v) => {
+        sim.playing = false;
+        sim.morphTarget = THREE.MathUtils.clamp(v, 0, 3);
+        glowTarget.set(STAGES[Math.round(sim.morphTarget)].accent);
+      },
+      setPlaying: (b) => {
+        if (b && sim.morphTarget > 2.9) {
+          sim.morphT = 0;
+          sim.morphTarget = 0;
+          sim.prevMorphT = 0;
+          spawnBurst(STAGES[0].accent, 0.8, 50);
+        }
+        sim.playing = b;
+      },
       pulse,
     };
 
@@ -703,6 +859,8 @@ export function MetamorphosisLab({ onOpenAtlas }: { onOpenAtlas: () => void }) {
     const updateMouse = (e: PointerEvent) => {
       const r = el.getBoundingClientRect();
       sim.mouse.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+      sim.mouseCX = e.clientX;
+      sim.mouseCY = e.clientY;
       sim.mouseOn = true;
     };
 
@@ -755,16 +913,38 @@ export function MetamorphosisLab({ onOpenAtlas }: { onOpenAtlas: () => void }) {
       if (sim.moved < 8) {
         updateMouse(e);
         raycaster.setFromCamera(sim.mouse, camera);
-        const hit = raycaster.intersectObjects(orbMeshes, false)[0];
-        if (hit) {
-          const idx = hit.object.userData.orbIndex as number;
-          sim.selectedIdx = idx;
-          setSelected(orbs[idx].gene);
-          tmpV.copy(orbs[idx].pos).normalize().multiplyScalar(1.6);
-          orbs[idx].vel.add(tmpV);
+        if (sim.mode === "atlas") {
+          const targets = hotspots.filter((h) => h.mesh.visible).map((h) => h.mesh);
+          const hit = raycaster.intersectObjects(targets, false)[0];
+          if (hit) {
+            const partId = hit.object.userData.partId as string;
+            const part = PART_BY_ID.get(partId) ?? null;
+            sim.selectedPartId = partId;
+            sim.selectedIdx = -1;
+            setSelected(null);
+            setSelectedPart(part);
+            if (part) {
+              hit.object.getWorldPosition(tmpV);
+              spawnBurst(STAGES[part.stage].accent, 0.5, 26, tmpV);
+            }
+          } else {
+            sim.selectedPartId = null;
+            setSelectedPart(null);
+          }
         } else {
-          sim.selectedIdx = -1;
-          setSelected(null);
+          const hit = raycaster.intersectObjects(orbMeshes, false)[0];
+          if (hit) {
+            const idx = hit.object.userData.orbIndex as number;
+            sim.selectedIdx = idx;
+            sim.selectedPartId = null;
+            setSelectedPart(null);
+            setSelected(orbs[idx].gene);
+            tmpV.copy(orbs[idx].pos).normalize().multiplyScalar(1.6);
+            orbs[idx].vel.add(tmpV);
+          } else {
+            sim.selectedIdx = -1;
+            setSelected(null);
+          }
         }
       }
       sim.lastInteract = tNow;
@@ -833,18 +1013,65 @@ export function MetamorphosisLab({ onOpenAtlas }: { onOpenAtlas: () => void }) {
       sim.flashV *= Math.pow(0.015, dt);
       flash.intensity = sim.flashV * 90;
 
-      /* stage morph */
+      /* morph timeline drive */
+      if (sim.playing) {
+        sim.morphTarget += dt * 0.115;
+        if (sim.morphTarget >= 3) {
+          sim.morphTarget = 3;
+          sim.playing = false;
+          setPlaying(false);
+          spawnBurst(STAGES[3].accent, 0.9, 60);
+        }
+        glowTarget.set(
+          new THREE.Color(STAGES[Math.min(3, Math.round(sim.morphTarget))].accent)
+        );
+      }
+      sim.morphT += (sim.morphTarget - sim.morphT) * Math.min(1, dt * 3.4);
+      if (Math.abs(sim.morphTarget - sim.morphT) < 0.0006) sim.morphT = sim.morphTarget;
+
+      /* stage morph — weights from morphT (triangle across stages) */
+      const w: number[] = [0, 1, 2, 3].map((i) =>
+        THREE.MathUtils.clamp(1 - Math.abs(sim.morphT - i), 0, 1)
+      );
       for (let i = 0; i < 4; i++) {
-        const target = i === sim.targetStage ? 1 : 0;
-        sim.anim[i] += (target - sim.anim[i]) * Math.min(1, dt * 4.2);
-        const v = sim.anim[i];
         const h = handles[i];
-        h.group.visible = v > 0.02;
+        const eased = w[i] * w[i] * (3 - 2 * w[i]);
+        h.group.visible = eased > 0.02;
         if (!h.group.visible) continue;
-        const eased = v * v * (3 - 2 * v);
-        const sc = h.baseScale * (0.05 + 0.95 * eased) * (1 + sim.kick * 0.12 * eased);
+        const sc = h.baseScale * (0.06 + 0.94 * eased) * (1 + sim.kick * 0.12 * eased);
         h.group.scale.setScalar(sc);
         setGroupOpacity(h.group, eased);
+      }
+
+      /* dissolve motes while actually transitioning */
+      const dm = Math.abs(sim.morphT - sim.prevMorphT);
+      sim.prevMorphT = sim.morphT;
+      if (dm > 0.0018 && Math.random() < 0.4) {
+        const near = Math.round(THREE.MathUtils.clamp(sim.morphT, 0, 3));
+        spawnBurst(STAGES[near].accent, 0.28, 7);
+      }
+
+      /* nearest stage → React readout */
+      const nearest = Math.round(THREE.MathUtils.clamp(sim.morphT, 0, 3));
+      if (nearest !== sim.lastNearest) {
+        sim.lastNearest = nearest;
+        stageSetterRef.current(nearest);
+      }
+
+      /* timeline DOM readouts (no React re-render) */
+      if (captionRef.current && subRef.current) {
+        const ci = CAPTIONS.findIndex((c) => sim.morphT >= c.a && sim.morphT < c.b);
+        if (ci !== sim.captionIdx && ci >= 0) {
+          sim.captionIdx = ci;
+          captionRef.current.textContent = CAPTIONS[ci].label;
+          subRef.current.textContent = CAPTIONS[ci].sub;
+        }
+      }
+      if (hoursRef.current) {
+        hoursRef.current.textContent = `T+${String(Math.round((sim.morphT / 3) * 240)).padStart(3, "0")} h`;
+      }
+      if (scrubRef.current && !scrubbingRef.current) {
+        scrubRef.current.value = String(Math.round((sim.morphT / 3) * 1000));
       }
 
       /* stage-internal life */
@@ -883,10 +1110,28 @@ export function MetamorphosisLab({ onOpenAtlas }: { onOpenAtlas: () => void }) {
       /* dust */
       dust.rotation.y += dt * 0.012;
 
-      /* rings filter */
+      /* rings filter (+ atlas fade) */
+      const atlasVis = sim.mode === "atlas" ? 0 : 1;
       rings.forEach((r, i) => {
-        const target = sim.filter === null ? 0.16 : sim.filter === PATH_KEYS[i] ? 0.55 : 0.04;
-        r.mat.opacity += (target - r.mat.opacity) * Math.min(1, dt * 6);
+        const base = sim.filter === null ? 0.16 : sim.filter === PATH_KEYS[i] ? 0.55 : 0.04;
+        r.mat.opacity += (base * atlasVis - r.mat.opacity) * Math.min(1, dt * 6);
+      });
+
+      /* anatomy hotspots */
+      hotspots.forEach((hs, i) => {
+        const want = sim.mode === "atlas" && w[hs.part.stage] > 0.55 ? 1 : 0;
+        hs.op += (want - hs.op) * Math.min(1, dt * 5);
+        const vis = hs.op > 0.03;
+        hs.mesh.visible = vis;
+        if (!vis) return;
+        const pulseS = 1 + 0.14 * Math.sin(tNow * 3 + i * 1.3);
+        const sel = sim.selectedPartId === hs.part.id ? 1.55 : 1;
+        const hov = sim.hoverPartId === hs.part.id ? 1.35 : 1;
+        hs.mesh.scale.setScalar(pulseS * sel * hov);
+        hs.ring.rotation.x = tNow * 1.4 + i;
+        hs.ring.rotation.y = tNow * 0.9;
+        hs.mat.opacity = 0.9 * hs.op;
+        hs.ringMat.opacity = (sel > 1 ? 0.95 : 0.55) * hs.op;
       });
 
       /* gene orbs — spring physics toward orbit path */
@@ -909,17 +1154,40 @@ export function MetamorphosisLab({ onOpenAtlas }: { onOpenAtlas: () => void }) {
         const isSel = idx === sim.selectedIdx;
         const hoverScale = isSel ? 1.65 : idx === sim.hoverIdx ? 1.45 : 1;
         const breathe = 0.92 + 0.08 * Math.sin(tNow * 2 + o.phase);
-        o.group.scale.setScalar(o.dim * hoverScale * breathe);
-        o.mat.opacity = 0.95 * o.dim;
-        o.spriteMat.opacity = (isSel || idx === sim.hoverIdx ? 1 : 0.85) * o.dim;
+        o.group.scale.setScalar(o.dim * hoverScale * breathe * (0.15 + 0.85 * atlasVis));
+        o.mat.opacity = 0.95 * o.dim * atlasVis;
+        o.spriteMat.opacity = (isSel || idx === sim.hoverIdx ? 1 : 0.85) * o.dim * atlasVis;
       });
 
-      /* hover raycast */
+      /* hover raycast (atlas: body hotspots · orrery: gene orbs) */
       if (sim.mouseOn && !sim.dragging) {
         raycaster.setFromCamera(sim.mouse, camera);
-        const hit = raycaster.intersectObjects(orbMeshes, false)[0];
-        sim.hoverIdx = hit ? (hit.object.userData.orbIndex as number) : -1;
-        el.style.cursor = sim.hoverIdx >= 0 ? "pointer" : "grab";
+        let label = "";
+        if (sim.mode === "atlas") {
+          const targets = hotspots.filter((h) => h.mesh.visible).map((h) => h.mesh);
+          const hit = raycaster.intersectObjects(targets, false)[0];
+          sim.hoverPartId = hit ? (hit.object.userData.partId as string) : null;
+          sim.hoverIdx = -1;
+          if (sim.hoverPartId) label = PART_BY_ID.get(sim.hoverPartId)?.label ?? "";
+        } else {
+          const hit = raycaster.intersectObjects(orbMeshes, false)[0];
+          sim.hoverIdx = hit ? (hit.object.userData.orbIndex as number) : -1;
+          sim.hoverPartId = null;
+          if (sim.hoverIdx >= 0) label = orbs[sim.hoverIdx].gene.symbol;
+        }
+        el.style.cursor = label ? "pointer" : "grab";
+        const tip = tooltipRef.current;
+        if (tip) {
+          if (label) {
+            tip.textContent = label;
+            tip.style.opacity = "1";
+            tip.style.transform = `translate(${sim.mouseCX + 16}px, ${sim.mouseCY + 14}px)`;
+          } else {
+            tip.style.opacity = "0";
+          }
+        }
+      } else if (tooltipRef.current) {
+        tooltipRef.current.style.opacity = "0";
       }
 
       /* waves */
@@ -964,12 +1232,13 @@ export function MetamorphosisLab({ onOpenAtlas }: { onOpenAtlas: () => void }) {
         }
       }
 
-      /* auto-cycle */
-      if (sim.auto && tNow - sim.lastInteract > 4) {
+      /* auto-cycle (orrery only, when idle and not playing the timeline) */
+      if (sim.auto && !sim.playing && sim.mode === "orrery" && tNow - sim.lastInteract > 4) {
         sim.cycle += dt;
         if (sim.cycle > 5.5) {
           sim.cycle = 0;
-          stageSetterRef.current((sim.targetStage + 1) % 4);
+          sim.morphTarget = (sim.lastNearest + 1) % 4;
+          glowTarget.set(STAGES[(sim.lastNearest + 1) % 4].accent);
         }
       }
 
@@ -1016,6 +1285,14 @@ export function MetamorphosisLab({ onOpenAtlas }: { onOpenAtlas: () => void }) {
   useEffect(() => {
     apiRef.current?.setAuto(auto);
   }, [auto]);
+  useEffect(() => {
+    apiRef.current?.setMode(mode);
+    setSelectedPart(null);
+    setPlaying(false);
+  }, [mode]);
+  useEffect(() => {
+    apiRef.current?.setPlaying(playing);
+  }, [playing]);
 
   const s = STAGES[stage];
 
@@ -1045,7 +1322,9 @@ export function MetamorphosisLab({ onOpenAtlas }: { onOpenAtlas: () => void }) {
           </div>
         </div>
         <div className="mt-3 hidden md:block font-mono text-[10px] uppercase tracking-[0.18em] text-faint">
-          drag · scroll · pinch — double-click fires a hormone pulse
+          {mode === "atlas"
+            ? "click the glowing markers on the specimen to read its anatomy"
+            : "drag · scroll · pinch — double-click fires a hormone pulse"}
         </div>
       </div>
 
@@ -1191,6 +1470,149 @@ export function MetamorphosisLab({ onOpenAtlas }: { onOpenAtlas: () => void }) {
         </div>
       )}
 
+      {/* ---------- anatomy part panel ---------- */}
+      {selectedPart && mode === "atlas" && (
+        <div className="absolute right-3 md:right-7 top-[150px] lg:top-[150px] w-[302px] max-w-[86vw]">
+          <div
+            className="border rounded-xl bg-abyss/85 backdrop-blur-md p-5"
+            style={{
+              borderColor: `${STAGES[selectedPart.stage].accent}66`,
+              boxShadow: `0 0 40px ${STAGES[selectedPart.stage].accent}1c`,
+            }}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <span
+                className="font-mono text-[9.5px] uppercase tracking-[0.22em] px-2 py-1 rounded border"
+                style={{
+                  color: STAGES[selectedPart.stage].accent,
+                  borderColor: `${STAGES[selectedPart.stage].accent}55`,
+                }}
+              >
+                {STAGES[selectedPart.stage].num} · anatomy atlas
+              </span>
+              <button
+                type="button"
+                onClick={() => setSelectedPart(null)}
+                className="font-mono text-faint hover:text-ink text-lg leading-none px-1 cursor-pointer"
+                aria-label="Close anatomy panel"
+              >
+                ×
+              </button>
+            </div>
+            <div className="mt-3 font-display font-bold text-xl leading-tight">
+              {selectedPart.label}
+            </div>
+            <p className="mt-2.5 text-[12.5px] leading-relaxed text-ink/90">{selectedPart.fn}</p>
+            <div className="mt-3 pt-3 border-t border-line/60">
+              <div className="font-mono text-[9.5px] uppercase tracking-[0.2em] text-faint mb-2">
+                genes at work here
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {selectedPart.genes.map((sym) => {
+                  const g = GENE_BY_SYMBOL.get(sym);
+                  const c = g ? PATHWAYS[g.pathway].color : "#93aeb1";
+                  return (
+                    <button
+                      key={sym}
+                      type="button"
+                      onClick={() => {
+                        if (g) {
+                          setSelected(g);
+                          setSelectedPart(null);
+                        }
+                      }}
+                      className="gene-chip font-mono text-[11px] px-2 py-1 rounded border cursor-pointer"
+                      style={{ borderColor: `${c}55`, color: c, background: `${c}0d` }}
+                      title={g ? g.fn : sym}
+                    >
+                      {sym}
+                    </button>
+                  );
+                })}
+              </div>
+              {GENE_BY_SYMBOL.get(selectedPart.genes[0]) && (
+                <div className="mt-2 font-mono text-[9.5px] text-faint">
+                  ↳ click a gene for its molecular function
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ---------- morph timeline ---------- */}
+      <div className="absolute left-1/2 -translate-x-1/2 bottom-[168px] md:bottom-[104px] w-[min(94vw,640px)] z-20">
+        <div className="border border-line rounded-xl bg-abyss/80 backdrop-blur-md px-4 pt-3 pb-2.5">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setPlaying((p) => !p)}
+              className="gene-chip w-9 h-9 shrink-0 rounded-lg border border-ecd/60 bg-ecd/5 text-ecd grid place-items-center cursor-pointer hover:bg-ecd/15"
+              style={{ boxShadow: "0 0 16px rgba(110,240,163,0.2)" }}
+              aria-label={playing ? "Pause lifecycle" : "Play full lifecycle"}
+            >
+              {playing ? (
+                <svg width="11" height="12" viewBox="0 0 11 12" fill="currentColor">
+                  <rect x="0" y="0" width="4" height="12" rx="1" />
+                  <rect x="7" y="0" width="4" height="12" rx="1" />
+                </svg>
+              ) : (
+                <svg width="11" height="12" viewBox="0 0 11 12" fill="currentColor">
+                  <path d="M0 0 L11 6 L0 12 Z" />
+                </svg>
+              )}
+            </button>
+            <div className="relative flex-1">
+              <input
+                ref={scrubRef}
+                type="range"
+                min={0}
+                max={1000}
+                defaultValue={0}
+                onPointerDown={() => {
+                  scrubbingRef.current = true;
+                }}
+                onPointerUp={() => {
+                  scrubbingRef.current = false;
+                }}
+                onChange={(e) => {
+                  apiRef.current?.setMorph((Number(e.target.value) / 1000) * 3);
+                }}
+                className="w-full accent-[#6ef0a3] cursor-pointer"
+                aria-label="Metamorphosis timeline"
+              />
+              <div className="flex justify-between mt-0.5 px-0.5">
+                {STAGES.map((st, i) => (
+                  <button
+                    key={st.key}
+                    type="button"
+                    onClick={() => {
+                      setPlaying(false);
+                      apiRef.current?.setMorph(i);
+                    }}
+                    className="font-mono text-[8.5px] tracking-[0.14em] cursor-pointer transition-colors hover:opacity-100"
+                    style={{ color: stage === i ? st.accent : "#5d7a80", opacity: 0.85 }}
+                  >
+                    {st.name.split(" · ")[0].toUpperCase()}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <span ref={hoursRef} className="font-mono text-[10.5px] text-ecd w-[64px] text-right shrink-0">
+              T+000 h
+            </span>
+          </div>
+          <div className="mt-1.5 flex items-baseline gap-2.5 min-h-[32px]">
+            <span ref={captionRef} className="font-display font-bold text-[13px] text-jh shrink-0">
+              Embryogenesis
+            </span>
+            <span ref={subRef} className="text-[11px] text-dim leading-snug">
+              bcd/nos gradients → gap → pair-rule → Hox: one cell becomes a segmented larva.
+            </span>
+          </div>
+        </div>
+      </div>
+
       {/* ---------- bottom dock ---------- */}
       <div className="absolute bottom-4 md:bottom-6 left-1/2 -translate-x-1/2 sm:left-auto sm:translate-x-0 sm:right-4 md:right-7 w-[min(94vw,620px)] sm:w-auto">
         <div className="border border-line rounded-xl bg-abyss/80 backdrop-blur-md px-3 py-3 flex items-center gap-2 flex-wrap justify-center">
@@ -1248,6 +1670,21 @@ export function MetamorphosisLab({ onOpenAtlas }: { onOpenAtlas: () => void }) {
 
           <button
             type="button"
+            onClick={() => setMode(mode === "atlas" ? "orrery" : "atlas")}
+            className="font-mono text-[10px] uppercase tracking-[0.14em] px-3 py-2 rounded-lg border cursor-pointer transition-colors"
+            style={{
+              borderColor: mode === "atlas" ? "#4fe0d0" : "rgba(28,59,70,0.9)",
+              color: mode === "atlas" ? "#4fe0d0" : "#93aeb1",
+              background: mode === "atlas" ? "rgba(79,224,208,0.1)" : "rgba(11,34,43,0.6)",
+              boxShadow: mode === "atlas" ? "0 0 18px rgba(79,224,208,0.25)" : "none",
+            }}
+            title="Toggle anatomy atlas mode"
+          >
+            {mode === "atlas" ? "◉ atlas" : "○ atlas"}
+          </button>
+
+          <button
+            type="button"
             onClick={() => apiRef.current?.pulse()}
             className="gene-chip font-mono text-[10px] uppercase tracking-[0.14em] px-3 py-2 rounded-lg border border-jh/60 text-jh bg-jh/5 hover:bg-jh/15 cursor-pointer"
             style={{ boxShadow: "0 0 18px rgba(255,196,79,0.15)" }}
@@ -1271,6 +1708,13 @@ export function MetamorphosisLab({ onOpenAtlas }: { onOpenAtlas: () => void }) {
           )}
         </div>
       </div>
+
+      {/* hover tooltip */}
+      <div
+        ref={tooltipRef}
+        className="fixed top-0 left-0 z-50 pointer-events-none font-mono text-[11px] px-2.5 py-1.5 rounded-md border border-ecd/40 bg-abyss/90 text-ink whitespace-nowrap transition-opacity duration-150"
+        style={{ opacity: 0, boxShadow: "0 0 18px rgba(110,240,163,0.15)" }}
+      />
     </div>
   );
 }
