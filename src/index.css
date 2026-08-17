@@ -1,1 +1,191 @@
 @import "tailwindcss";
+
+@theme {
+  --font-display: "Unbounded", sans-serif;
+  --font-body: "Instrument Sans", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+
+  --color-abyss: #050f14;
+  --color-deep: #081a21;
+  --color-panel: #0b222b;
+  --color-panel2: #0e2a34;
+  --color-line: #1c3b46;
+  --color-ink: #e9f5f0;
+  --color-dim: #93aeb1;
+  --color-faint: #5d7a80;
+
+  --color-ecd: #6ef0a3;
+  --color-jh: #ffc44f;
+  --color-grw: #5bc9ff;
+  --color-seg: #4fe0d0;
+  --color-hox: #ff7e9e;
+  --color-lys: #ff6157;
+  --color-ecl: #c4a9ff;
+  --color-dif: #f0a95e;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--color-abyss);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  overflow-x: hidden;
+}
+
+::selection {
+  background: rgba(110, 240, 163, 0.28);
+  color: #eafff3;
+}
+
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-track { background: #07171d; }
+*::-webkit-scrollbar-thumb { background: #1c3b46; border-radius: 8px; }
+*::-webkit-scrollbar-thumb:hover { background: #2b5563; }
+
+/* ---------- ambient layers ---------- */
+.graticule {
+  background-image:
+    linear-gradient(rgba(110, 240, 163, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(110, 240, 163, 0.045) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(ellipse 90% 80% at 50% 30%, black 30%, transparent 90%);
+}
+
+.noise-overlay {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+  opacity: 0.05;
+  mix-blend-mode: overlay;
+}
+
+@keyframes drift {
+  0% { transform: translate3d(0, 0, 0); opacity: 0; }
+  12% { opacity: var(--tw, 0.6); }
+  88% { opacity: var(--tw, 0.6); }
+  100% { transform: translate3d(var(--dx, 30px), var(--dy, -80px), 0); opacity: 0; }
+}
+.speck { animation: drift var(--dur, 14s) linear infinite; }
+
+@keyframes floaty {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-9px); }
+}
+.floaty { animation: floaty 6s ease-in-out infinite; }
+
+/* ---------- creature animations ---------- */
+@keyframes crawl {
+  0%, 100% { transform: translateX(-5px) scaleX(1); }
+  25% { transform: translateX(3px) scaleX(0.965); }
+  50% { transform: translateX(6px) scaleX(1.02); }
+  75% { transform: translateX(0px) scaleX(0.985); }
+}
+.crawl { animation: crawl 3.4s ease-in-out infinite; transform-origin: center; }
+
+@keyframes breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.022); }
+}
+.breathe { animation: breathe 4.5s ease-in-out infinite; transform-origin: center; }
+
+@keyframes wingbeat {
+  0%, 100% { transform: rotate(0deg) scaleY(1); }
+  50% { transform: rotate(-4deg) scaleY(0.96); }
+}
+.wingbeat { animation: wingbeat 2.6s ease-in-out infinite; transform-origin: 30% 85%; }
+
+@keyframes innerglow {
+  0%, 100% { opacity: 0.16; }
+  50% { opacity: 0.34; }
+}
+.innerglow { animation: innerglow 4s ease-in-out infinite; }
+
+@keyframes shimmerline {
+  0% { stroke-dashoffset: 240; }
+  100% { stroke-dashoffset: 0; }
+}
+.shimmerline {
+  stroke-dasharray: 6 10;
+  animation: shimmerline 9s linear infinite;
+}
+
+@keyframes pulsedot {
+  0%, 100% { r: 7; opacity: 0.9; }
+  50% { r: 11; opacity: 0.35; }
+}
+.pulsedot { animation: pulsedot 2.2s ease-in-out infinite; }
+
+@keyframes dashflow {
+  from { stroke-dashoffset: 0; }
+  to { stroke-dashoffset: -22; }
+}
+.dashflow {
+  stroke-dasharray: 4 7;
+  animation: dashflow 1.6s linear infinite;
+}
+
+/* ---------- ticker ---------- */
+@keyframes tickerScroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.ticker-track {
+  animation: tickerScroll 46s linear infinite;
+}
+.ticker-track:hover { animation-play-state: paused; }
+
+/* ---------- reveal ---------- */
+.reveal {
+  opacity: 0;
+  transform: translateY(26px);
+  transition: opacity 0.9s cubic-bezier(0.2, 0.65, 0.25, 1), transform 0.9s cubic-bezier(0.2, 0.65, 0.25, 1);
+}
+.reveal.on {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ---------- scramble caret ---------- */
+@keyframes caretblink {
+  0%, 45% { opacity: 1; }
+  55%, 100% { opacity: 0; }
+}
+.caret { animation: caretblink 0.9s steps(1) infinite; }
+
+/* ---------- gene chip ---------- */
+.gene-chip {
+  transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease, background-color 0.22s ease;
+}
+.gene-chip:hover {
+  transform: translateY(-2px);
+}
+
+.linkline {
+  transition: stroke 0.3s ease, opacity 0.3s ease;
+}
+
+/* accordion */
+.acc-body {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.5s cubic-bezier(0.2, 0.65, 0.25, 1);
+}
+.acc-body.open { grid-template-rows: 1fr; }
+.acc-inner { overflow: hidden; }
+
+/* stage morph */
+.morph-layer {
+  transition: opacity 0.7s ease, transform 0.7s cubic-bezier(0.2, 0.65, 0.25, 1), filter 0.7s ease;
+}
+
+/* ---------- reduced motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .speck, .floaty, .crawl, .breathe, .wingbeat, .innerglow,
+  .shimmerline, .pulsedot, .dashflow, .ticker-track, .caret {
+    animation: none !important;
+  }
+  .reveal { opacity: 1; transform: none; transition: none; }
+  .morph-layer, .acc-body, .gene-chip { transition: none; }
+}
